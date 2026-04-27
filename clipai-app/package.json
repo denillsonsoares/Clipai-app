@@ -1,0 +1,12 @@
+{
+  "name": "clipai-server",
+  "version": "1.0.0",
+  "description": "Servidor proxy local do ClipAI — resolve CORS entre frontend e Shotstack/Anthropic",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {},
+  "engines": { "node": ">=18" }
+}

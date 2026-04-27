@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ClipAI — Editor de vídeo para criadores</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #080808;
+  --surface: #111111;
+  --surface2: #181818;
+  --surface3: #222222;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --accent: #C8F135;
+  --accent2: #A8D420;
+  --accent-dim: rgba(200,241,53,0.12);
+  --text: #F0F0F0;
+  --text2: #888;
+  --text3: #555;
+  --red: #FF4444;
+  --blue: #4488FF;
+  --purple: #9966FF;
+  --radius: 12px;
+  --radius-lg: 18px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* LAYOUT */
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* HEADER */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(8,8,8,0.8);
+  backdrop-filter: blur(12px);
+  position: sticky; top: 0; z-index: 100;
+}
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px; font-weight: 800;
+  letter-spacing: -0.5px; color: var(--text);
+}
+.logo em { color: var(--accent); font-style: normal; }
+.header-badge {
+  font-size: 11px; background: var(--accent-dim);
+  color: var(--accent); border: 1px solid rgba(200,241,53,0.2);
+  padding: 3px 10px; border-radius: 20px; font-weight: 500;
+}
+.header-right { display: flex; align-items: center; gap: 12px; }
+.btn-sm {
+  padding: 7px 16px; border-radius: 8px; font-size: 13px;
+  font-family: 'DM Sans', sans-serif; cursor: pointer;
+  font-weight: 500; transition: all 0.15s; border: 1px solid var(--border2);
+  background: var(--surface2); color: var(--text2);
+}
+.btn-sm:hover { background: var(--surface3); color: var(--text); }
+
+/* MAIN */
+main { flex: 1; padding: 28px; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+/* STEP NAV */
+.step-nav {
+  display: flex; gap: 0; margin-bottom: 32px;
+  background: var(--surface); border-radius: var(--radius);
+  padding: 4px; border: 1px solid var(--border);
+}
+.step-item {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 9px; cursor: pointer;
+  transition: all 0.2s; color: var(--text3); font-size: 13px;
+  font-weight: 500;
+}
+.step-item.active { background: var(--surface3); color: var(--text); }
+.step-item.done { color: var(--text2); }
+.step-item.done .step-num { background: var(--accent); color: #000; }
+.step-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--surface3); color: var(--text3);
+  font-size: 11px; font-weight: 700; display: flex;
+  align-items: center; justify-content: center; flex-shrink: 0;
+  transition: all 0.2s;
+}
+.step-item.active .step-num { background: var(--accent); color: #000; }
+
+/* SECTIONS */
+.section { display: none; }
+.section.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* STEP 1 — UPLOAD */
+.upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.upload-zone {
+  border: 1.5px dashed var(--border2); border-radius: var(--radius-lg);
+  padding: 40px 24px; text-align: center; cursor: pointer;
+  transition: all 0.2s; position: relative; background: var(--surface);
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--accent); background: var(--accent-dim);
+}
+.upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.upload-icon {
+  width: 48px; height: 48px; background: var(--surface2);
+  border-radius: 12px; margin: 0 auto 12px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border2);
+}
+.upload-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.upload-sub { font-size: 12px; color: var(--text3); }
+.upload-big { grid-column: 1 / -1; }
+.upload-big .upload-icon { width: 60px; height: 60px; border-radius: 16px; }
+.upload-big .upload-title { font-size: 18px; }
+
+.files-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.file-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 14px;
+  animation: slideIn 0.25s ease;
+}
+@keyframes slideIn { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:translateX(0); } }
+.file-thumb {
+  width: 42px; height: 56px; background: var(--surface2);
+  border-radius: 6px; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; overflow: hidden;
+}
+.file-thumb video { width: 100%; height: 100%; object-fit: cover; }
+.file-info { flex: 1; min-width: 0; }
+.file-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.file-dur { font-size: 11px; color: var(--accent); font-weight: 500; }
+.file-remove {
+  width: 28px; height: 28px; border-radius: 6px; background: transparent;
+  border: 1px solid var(--border); cursor: pointer; color: var(--text3);
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+  transition: all 0.15s;
+}
+.file-remove:hover { background: rgba(255,68,68,0.1); border-color: var(--red); color: var(--red); }
+
+.music-zone {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px 20px;
+  display: flex; align-items: center; gap: 14px; cursor: pointer;
+  transition: all 0.15s; position: relative; overflow: hidden;
+}
+.music-zone:hover { border-color: var(--border2); background: var(--surface2); }
+.music-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.music-icon-wrap {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.music-info { flex: 1; }
+.music-label { font-size: 13px; font-weight: 500; }
+.music-sub { font-size: 11px; color: var(--text3); }
+.music-playing { display: flex; gap: 3px; align-items: flex-end; height: 18px; }
+.music-bar {
+  width: 3px; background: var(--accent); border-radius: 2px;
+  animation: mwave 0.7s ease-in-out infinite;
+}
+.music-bar:nth-child(1){height:8px;animation-delay:0s}
+.music-bar:nth-child(2){height:14px;animation-delay:0.1s}
+.music-bar:nth-child(3){height:10px;animation-delay:0.2s}
+.music-bar:nth-child(4){height:16px;animation-delay:0.3s}
+.music-bar:nth-child(5){height:6px;animation-delay:0.4s}
+@keyframes mwave { 0%,100%{transform:scaleY(0.5)} 50%{transform:scaleY(1)} }
+
+/* STEP 2 — PROMPT */
+.prompt-area {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px;
+}
+.prompt-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.prompt-label { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; }
+.ai-badge {
+  font-size: 10px; background: var(--accent-dim); color: var(--accent);
+  padding: 2px 8px; border-radius: 20px; font-weight: 600;
+}
+textarea#prompt {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 14px; line-height: 1.6; padding: 14px 16px; resize: none;
+  min-height: 120px; outline: none; transition: border-color 0.2s;
+}
+textarea#prompt:focus { border-color: var(--border2); }
+textarea#prompt::placeholder { color: var(--text3); }
+
+.examples-label { font-size: 11px; color: var(--text3); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.examples-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.example-chip {
+  padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text2); font-size: 12px; cursor: pointer;
+  transition: all 0.15s;
+}
+.example-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+/* FORMAT & STYLE */
+.options-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+.opt-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius); padding: 14px 10px; text-align: center;
+  cursor: pointer; transition: all 0.2s;
+}
+.opt-card:hover { border-color: var(--border2); background: var(--surface2); }
+.opt-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+.opt-icon { font-size: 22px; margin-bottom: 6px; }
+.opt-name { font-size: 13px; font-weight: 600; font-family: 'Syne', sans-serif; }
+.opt-dim { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.opt-card.selected .opt-dim { color: var(--accent); opacity: 0.7; }
+
+.style-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; }
+.style-card {
+  border-radius: var(--radius); aspect-ratio: 1; cursor: pointer;
+  border: 2px solid transparent; transition: all 0.2s; position: relative; overflow: hidden;
+}
+.style-card.selected { border-color: var(--accent); }
+.style-preview { width: 100%; height: 100%; display: flex; align-items: flex-end; padding: 6px; }
+.style-name { font-size: 10px; font-weight: 700; font-family: 'Syne', sans-serif; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+.style-check {
+  position: absolute; top: 5px; right: 5px; width: 16px; height: 16px;
+  background: var(--accent); border-radius: 50%; display: none;
+  align-items: center; justify-content: center;
+}
+.style-card.selected .style-check { display: flex; }
+
+/* STEP 3 — PROCESSING */
+.processing-wrap { display: flex; flex-direction: column; align-items: center; padding: 60px 0; }
+.proc-ring {
+  width: 100px; height: 100px; position: relative; margin-bottom: 24px;
+}
+.proc-ring svg { transform: rotate(-90deg); }
+.proc-ring-num {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; color: var(--accent);
+}
+.proc-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.proc-sub { color: var(--text3); font-size: 13px; margin-bottom: 40px; }
+
+.steps-track { width: 100%; max-width: 480px; }
+.track-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.track-item:last-child { border-bottom: none; }
+.track-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  background: var(--surface3); transition: background 0.3s;
+}
+.track-dot.done { background: var(--accent); }
+.track-dot.active { background: var(--accent); animation: pulse 0.9s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+.track-label { font-size: 13px; color: var(--text3); transition: color 0.3s; flex: 1; }
+.track-label.active { color: var(--text); font-weight: 500; }
+.track-label.done { color: var(--text2); }
+.track-time { font-size: 11px; color: var(--text3); }
+.track-time.done { color: var(--accent); }
+
+/* STEP 4 — RESULT */
+.result-grid { display: grid; grid-template-columns: 340px 1fr; gap: 24px; }
+.preview-panel { }
+.preview-phone {
+  background: #0d0d0d; border-radius: 24px; padding: 8px;
+  border: 1px solid var(--border2); position: relative;
+}
+.preview-screen {
+  background: #000; border-radius: 18px; aspect-ratio: 9/16;
+  position: relative; overflow: hidden; max-height: 480px;
+}
+.preview-video { width: 100%; height: 100%; object-fit: cover; }
+.preview-ui {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  justify-content: space-between; padding: 14px;
+}
+.preview-top { display: flex; justify-content: flex-end; }
+.preview-badge {
+  font-size: 10px; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+  color: #fff; padding: 3px 10px; border-radius: 20px; font-weight: 500;
+}
+.preview-bottom { }
+.preview-caption {
+  font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.8);
+}
+.preview-hashtags { font-size: 11px; color: rgba(255,255,255,0.7); }
+.preview-controls {
+  display: flex; gap: 8px; margin-top: 12px; align-items: center;
+}
+.play-btn {
+  width: 40px; height: 40px; background: var(--accent); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  border: none; transition: transform 0.1s;
+}
+.play-btn:hover { transform: scale(1.05); }
+.timeline-bar {
+  flex: 1; height: 4px; background: var(--surface3);
+  border-radius: 2px; position: relative; cursor: pointer;
+}
+.timeline-fill { height: 100%; background: var(--accent); border-radius: 2px; width: 45%; transition: width 0.1s; }
+.time-label { font-size: 11px; color: var(--text3); }
+
+.info-panel { display: flex; flex-direction: column; gap: 14px; }
+.info-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 18px;
+}
+.info-card-title {
+  font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600;
+  color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 14px;
+}
+.stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat-item { }
+.stat-val { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; color: var(--accent); }
+.stat-key { font-size: 11px; color: var(--text3); }
+
+.export-btns { display: flex; flex-direction: column; gap: 8px; }
+.export-btn {
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); cursor: pointer; transition: all 0.15s;
+  color: var(--text2); font-size: 13px; font-weight: 500;
+  font-family: 'DM Sans', sans-serif; text-decoration: none;
+}
+.export-btn:hover { border-color: var(--border2); background: var(--surface3); color: var(--text); }
+.export-btn.primary { background: var(--accent); border-color: var(--accent); color: #000; }
+.export-btn.primary:hover { background: var(--accent2); border-color: var(--accent2); }
+.export-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
+
+.edit-options { display: flex; gap: 8px; }
+.edit-chip {
+  flex: 1; padding: 9px 8px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text2); font-size: 12px;
+  text-align: center; cursor: pointer; transition: all 0.15s;
+  font-family: 'DM Sans', sans-serif; font-weight: 500;
+}
+.edit-chip:hover { border-color: var(--border2); color: var(--text); }
+
+/* BOTTOM NAV */
+.bottom-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 20px 28px; border-top: 1px solid var(--border);
+  background: var(--surface); position: sticky; bottom: 0;
+}
+.btn-back {
+  padding: 11px 22px; border-radius: var(--radius); font-size: 14px; font-weight: 500;
+  font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s;
+  background: transparent; border: 1px solid var(--border2); color: var(--text2);
+}
+.btn-back:hover { background: var(--surface2); color: var(--text); }
+.btn-next {
+  padding: 12px 28px; border-radius: var(--radius); font-size: 14px; font-weight: 600;
+  font-family: 'Syne', sans-serif; cursor: pointer; transition: all 0.15s;
+  background: var(--accent); border: none; color: #000;
+  display: flex; align-items: center; gap: 8px;
+}
+.btn-next:hover { background: var(--accent2); transform: translateY(-1px); }
+.btn-next:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.step-hint { font-size: 12px; color: var(--text3); }
+
+/* AI CHAT */
+.ai-chat-wrap {
+  position: fixed; bottom: 90px; right: 28px; z-index: 200;
+}
+.ai-chat-btn {
+  width: 52px; height: 52px; background: var(--accent); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  box-shadow: 0 4px 20px rgba(200,241,53,0.3); border: none;
+  transition: transform 0.2s;
+}
+.ai-chat-btn:hover { transform: scale(1.05); }
+.ai-chat-panel {
+  position: absolute; bottom: 64px; right: 0; width: 300px;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: none;
+}
+.ai-chat-panel.open { display: block; animation: fadeIn 0.2s ease; }
+.ai-chat-header {
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+}
+.ai-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; }
+.ai-name { font-size: 13px; font-weight: 600; font-family: 'Syne', sans-serif; }
+.ai-status { font-size: 10px; color: var(--text3); }
+.ai-messages { padding: 12px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.ai-msg { font-size: 12px; line-height: 1.5; }
+.ai-msg.bot { background: var(--surface2); border-radius: 10px 10px 10px 2px; padding: 8px 12px; color: var(--text2); }
+.ai-msg.user { background: var(--accent-dim); border-radius: 10px 10px 2px 10px; padding: 8px 12px; color: var(--accent); text-align: right; border: 1px solid rgba(200,241,53,0.15); }
+.ai-input-row { display: flex; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--border); }
+.ai-input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 12px; padding: 7px 10px; outline: none;
+}
+.ai-input:focus { border-color: var(--border2); }
+.ai-send {
+  width: 30px; height: 30px; background: var(--accent); border-radius: 8px;
+  border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* SECTION HEADERS */
+.section-head { margin-bottom: 20px; }
+.section-title { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+.section-sub { font-size: 14px; color: var(--text3); }
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+.label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.label { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+.label-hint { font-size: 11px; color: var(--text3); }
+
+.ai-thinking {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; background: var(--accent-dim);
+  border-radius: var(--radius); margin-top: 10px;
+  border: 1px solid rgba(200,241,53,0.15);
+}
+.ai-thinking-dots { display: flex; gap: 3px; }
+.ai-thinking-dot {
+  width: 5px; height: 5px; background: var(--accent);
+  border-radius: 50%; animation: bounce 0.8s ease-in-out infinite;
+}
+.ai-thinking-dot:nth-child(2){animation-delay:0.15s}
+.ai-thinking-dot:nth-child(3){animation-delay:0.3s}
+@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+.ai-thinking-text { font-size: 12px; color: var(--accent); font-weight: 500; }
+
+.toast {
+  position: fixed; top: 80px; right: 20px; z-index: 300;
+  background: var(--surface); border: 1px solid var(--accent);
+  border-radius: var(--radius); padding: 12px 18px;
+  font-size: 13px; color: var(--accent); font-weight: 500;
+  display: none; animation: slideFromRight 0.3s ease;
+}
+@keyframes slideFromRight { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+
+/* RESULT SCORE */
+.score-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.score-label { font-size: 12px; color: var(--text3); width: 80px; }
+.score-track { flex: 1; height: 5px; background: var(--surface3); border-radius: 3px; }
+.score-fill { height: 100%; border-radius: 3px; transition: width 1s ease 0.5s; }
+.score-val { font-size: 12px; color: var(--text2); width: 32px; text-align: right; }
+
+@media (max-width: 700px) {
+  main { padding: 16px; }
+  .result-grid { grid-template-columns: 1fr; }
+  .upload-grid { grid-template-columns: 1fr; }
+  .options-grid { grid-template-columns: repeat(2, 1fr); }
+  .style-grid { grid-template-columns: repeat(3, 1fr); }
+  .step-item .step-label { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">clip<em>AI</em></div>
+    <div class="header-right">
+      <div class="header-badge">✦ Powered by IA</div>
+      <button class="btn-sm" onclick="resetApp()">Novo projeto</button>
+    </div>
+  </header>
+
+  <div class="toast" id="toast"></div>
+
+  <main>
+    <!-- STEP NAV -->
+    <div class="step-nav">
+      <div class="step-item active" id="nav0" onclick="goStep(0)">
+        <div class="step-num">1</div>
+        <span class="step-label">Uploads</span>
+      </div>
+      <div class="step-item" id="nav1" onclick="goStep(1)">
+        <div class="step-num">2</div>
+        <span class="step-label">Prompt</span>
+      </div>
+      <div class="step-item" id="nav2" onclick="goStep(2)">
+        <div class="step-num">3</div>
+        <span class="step-label">Estética</span>
+      </div>
+      <div class="step-item" id="nav3">
+        <div class="step-num">4</div>
+        <span class="step-label">Gerando</span>
+      </div>
+      <div class="step-item" id="nav4">
+        <div class="step-num">5</div>
+        <span class="step-label">Resultado</span>
+      </div>
+    </div>
+
+    <!-- STEP 1: UPLOAD -->
+    <div class="section active" id="sec0">
+      <div class="section-head">
+        <div class="section-title">Suba seu material</div>
+        <div class="section-sub">Adicione os takes que você gravou e, se quiser, uma música de fundo</div>
+      </div>
+
+      <div class="upload-grid">
+        <div class="upload-zone upload-big" id="videoDropZone">
+          <input type="file" id="videoInput" multiple accept="video/*" onchange="handleVideoUpload(this)"/>
+          <div class="upload-icon">
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+              <rect x="2" y="5" width="22" height="16" rx="3" stroke="#C8F135" stroke-width="1.5"/>
+              <path d="M10 10l6 3-6 3V10z" fill="#C8F135"/>
+            </svg>
+          </div>
+          <div class="upload-title">Solte seus vídeos aqui</div>
+          <div class="upload-sub" style="margin-top:6px">MP4, MOV, AVI — vários arquivos de uma vez</div>
+        </div>
+      </div>
+
+      <div class="files-list" id="filesList"></div>
+
+      <div class="label-row"><div class="label">Música (opcional)</div></div>
+      <div class="music-zone" id="musicZone">
+        <input type="file" id="musicInput" accept="audio/*" onchange="handleMusicUpload(this)"/>
+        <div class="music-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M7 3v10.5A3 3 0 104 16.5V7.5l10-2V15a3 3 0 10-3 2.5V4.5L7 6.5V3z" fill="#C8F135"/>
+          </svg>
+        </div>
+        <div class="music-info">
+          <div class="music-label" id="musicLabel">Clique para adicionar música</div>
+          <div class="music-sub" id="musicSub">MP3, WAV, AAC — a IA vai sincronizar os cortes no beat</div>
+        </div>
+        <div class="music-playing" id="musicWave" style="display:none">
+          <div class="music-bar"></div>
+          <div class="music-bar"></div>
+          <div class="music-bar"></div>
+          <div class="music-bar"></div>
+          <div class="music-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: PROMPT -->
+    <div class="section" id="sec1">
+      <div class="section-head">
+        <div class="section-title">Descreva seu vídeo</div>
+        <div class="section-sub">Fale como você quer que fique — a IA vai entender e editar</div>
+      </div>
+
+      <div class="prompt-area">
+        <div class="prompt-header">
+          <div class="prompt-label">Seu comando</div>
+          <div class="ai-badge">IA vai ler isso</div>
+        </div>
+        <textarea id="prompt" rows="5" placeholder="Ex: Vídeo de treino na academia, quero cortes rápidos entre os aparelhos, legenda com o nome do exercício e a série, estética cinema escuro, música no beat dos cortes..."></textarea>
+        <div id="aiThinking" class="ai-thinking" style="display:none">
+          <div class="ai-thinking-dots">
+            <div class="ai-thinking-dot"></div>
+            <div class="ai-thinking-dot"></div>
+            <div class="ai-thinking-dot"></div>
+          </div>
+          <div class="ai-thinking-text" id="aiThinkingText">Analisando seus vídeos...</div>
+        </div>
+      </div>
+
+      <div class="label-row"><div class="label">Exemplos de prompts</div></div>
+      <div class="examples-row">
+        <div class="example-chip" onclick="setPrompt(this)">Treino academia, cortes no beat, legenda com série</div>
+        <div class="example-chip" onclick="setPrompt(this)">Publi de produto, narração natural, clean e moderno</div>
+        <div class="example-chip" onclick="setPrompt(this)">Vlog de viagem, cinematic, cortes suaves, legendas em inglês</div>
+        <div class="example-chip" onclick="setPrompt(this)">Antes e depois, transição dramática, música épica</div>
+        <div class="example-chip" onclick="setPrompt(this)">Tutorial de receita, legendas com ingredientes, passos numerados</div>
+        <div class="example-chip" onclick="setPrompt(this)">Rotina matinal, estética pastel, ritmo calmo, fundo lofi</div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="label-row"><div class="label">Formato de saída</div></div>
+      <div class="options-grid">
+        <div class="opt-card selected" onclick="selectFormat(this)" data-fmt="tiktok">
+          <div class="opt-icon">📱</div>
+          <div class="opt-name">TikTok</div>
+          <div class="opt-dim">1080×1920 · 9:16</div>
+        </div>
+        <div class="opt-card" onclick="selectFormat(this)" data-fmt="reels">
+          <div class="opt-icon">📸</div>
+          <div class="opt-name">Reels</div>
+          <div class="opt-dim">1080×1920 · 9:16</div>
+        </div>
+        <div class="opt-card" onclick="selectFormat(this)" data-fmt="youtube">
+          <div class="opt-icon">🎬</div>
+          <div class="opt-name">YouTube</div>
+          <div class="opt-dim">1920×1080 · 16:9</div>
+        </div>
+        <div class="opt-card" onclick="selectFormat(this)" data-fmt="stories">
+          <div class="opt-icon">✨</div>
+          <div class="opt-name">Stories</div>
+          <div class="opt-dim">1080×1920 · 9:16</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: STYLE -->
+    <div class="section" id="sec2">
+      <div class="section-head">
+        <div class="section-title">Escolha a estética</div>
+        <div class="section-sub">A IA vai aplicar o filtro e o estilo de edição certo</div>
+      </div>
+
+      <div class="label-row"><div class="label">Estilo visual</div></div>
+      <div class="style-grid">
+        <div class="style-card selected" onclick="selectStyle(this)" data-style="cinema">
+          <div class="style-preview" style="background: linear-gradient(160deg,#0a0e1a,#1a1a2e,#16213e)">
+            <div class="style-name">Cinema</div>
+          </div>
+          <div class="style-check">
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l2 2 3-3" stroke="#000" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+        <div class="style-card" onclick="selectStyle(this)" data-style="vibrante">
+          <div class="style-preview" style="background: linear-gradient(160deg,#ff6b6b,#feca57,#48dbfb)">
+            <div class="style-name">Vibrante</div>
+          </div>
+          <div class="style-check">
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l2 2 3-3" stroke="#000" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+        <div class="style-card" onclick="selectStyle(this)" data-style="minimal">
+          <div class="style-preview" style="background: linear-gradient(160deg,#f5f5f5,#e8e8e8,#d5d5d5)">
+            <div class="style-name" style="color:#333">Minimal</div>
+          </div>
+          <div class="style-check">
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l2 2 3-3" stroke="#000" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+        <div class="style-card" onclick="selectStyle(this)" data-style="dark">
+          <div class="style-preview" style="background: linear-gradient(160deg,#0a0a0a,#1a0a2e,#0d0d0d)">
+            <div class="style-name">Dark</div>
+          </div>
+          <div class="style-check">
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l2 2 3-3" stroke="#000" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+        <div class="style-card" onclick="selectStyle(this)" data-style="pastel">
+          <div class="style-preview" style="background: linear-gradient(160deg,#ffecd2,#fcb69f,#a1c4fd)">
+            <div class="style-name" style="color:#444">Pastel</div>
+          </div>
+          <div class="style-check">
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l2 2 3-3" stroke="#000" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="label-row"><div class="label">Velocidade de corte</div><div class="label-hint" id="cutSpeedLabel">Rápido (viral)</div></div>
+      <input type="range" min="1" max="5" value="4" oninput="updateCutSpeed(this)" style="width:100%;margin-bottom:20px"/>
+
+      <div class="divider"></div>
+      <div class="label-row"><div class="label">Legendas automáticas</div></div>
+      <div class="options-grid" style="grid-template-columns: repeat(3,1fr)">
+        <div class="opt-card selected" onclick="selectCaption(this)" data-cap="destaque">
+          <div class="opt-icon">🔥</div>
+          <div class="opt-name">Destaque</div>
+          <div class="opt-dim">Palavras-chave em cores</div>
+        </div>
+        <div class="opt-card" onclick="selectCaption(this)" data-cap="karaoke">
+          <div class="opt-icon">🎤</div>
+          <div class="opt-name">Karaokê</div>
+          <div class="opt-dim">Palavra a palavra</div>
+        </div>
+        <div class="opt-card" onclick="selectCaption(this)" data-cap="simples">
+          <div class="opt-icon">📝</div>
+          <div class="opt-name">Simples</div>
+          <div class="opt-dim">Frase por frase</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: PROCESSING -->
+    <div class="section" id="sec3">
+      <div class="processing-wrap">
+        <div class="proc-ring">
+          <svg width="100" height="100" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#1a1a1a" stroke-width="8"/>
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#C8F135" stroke-width="8"
+              stroke-dasharray="264" id="procCircle" stroke-dashoffset="264" stroke-linecap="round"/>
+          </svg>
+          <div class="proc-ring-num" id="procNum">0%</div>
+        </div>
+        <div class="proc-title">Editando seu vídeo</div>
+        <div class="proc-sub">A IA está trabalhando... isso leva cerca de 30 segundos</div>
+
+        <div class="steps-track" id="stepsTrack">
+          <div class="track-item"><div class="track-dot" id="d0"></div><div class="track-label" id="l0">Analisando seus takes</div><div class="track-time" id="t0"></div></div>
+          <div class="track-item"><div class="track-dot" id="d1"></div><div class="track-label" id="l1">Entendendo seu prompt</div><div class="track-time" id="t1"></div></div>
+          <div class="track-item"><div class="track-dot" id="d2"></div><div class="track-label" id="l2">Selecionando os melhores cortes</div><div class="track-time" id="t2"></div></div>
+          <div class="track-item"><div class="track-dot" id="d3"></div><div class="track-label" id="l3">Aplicando transições</div><div class="track-time" id="t3"></div></div>
+          <div class="track-item"><div class="track-dot" id="d4"></div><div class="track-label" id="l4">Gerando legendas com IA</div><div class="track-time" id="t4"></div></div>
+          <div class="track-item"><div class="track-dot" id="d5"></div><div class="track-label" id="l5">Aplicando filtro de cor</div><div class="track-time" id="t5"></div></div>
+          <div class="track-item"><div class="track-dot" id="d6"></div><div class="track-label" id="l6">Sincronizando música no beat</div><div class="track-time" id="t6"></div></div>
+          <div class="track-item"><div class="track-dot" id="d7"></div><div class="track-label" id="l7">Exportando no formato escolhido</div><div class="track-time" id="t7"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: RESULT -->
+    <div class="section" id="sec4">
+      <div class="section-head">
+        <div class="section-title">Seu vídeo está pronto ✦</div>
+        <div class="section-sub">Revise, ajuste se precisar e exporte direto para sua plataforma</div>
+      </div>
+
+      <div class="result-grid">
+        <div class="preview-panel">
+          <div class="preview-phone">
+            <div class="preview-screen">
+              <div id="previewVideoWrap" style="width:100%;height:100%;background:#111;display:flex;align-items:center;justify-content:center;">
+                <div style="text-align:center;color:#333;">
+                  <div style="font-size:32px;margin-bottom:8px">▶</div>
+                  <div style="font-size:12px">Preview do vídeo gerado</div>
+                </div>
+              </div>
+              <div class="preview-ui">
+                <div class="preview-top">
+                  <div class="preview-badge" id="previewBadge">TikTok · 9:16</div>
+                </div>
+                <div class="preview-bottom">
+                  <div class="preview-caption" id="previewCaption">Carregando legenda...</div>
+                  <div class="preview-hashtags" id="previewHashtags">#hashtags geradas pela IA</div>
+                </div>
+              </div>
+            </div>
+            <div class="preview-controls">
+              <button class="play-btn" onclick="togglePlay()">
+                <svg id="playIcon" width="14" height="14" viewBox="0 0 14 14" fill="#000"><path d="M3 2l8 5-8 5V2z"/></svg>
+              </button>
+              <div class="timeline-bar" onclick="seek(event, this)">
+                <div class="timeline-fill" id="timelineFill"></div>
+              </div>
+              <div class="time-label" id="timeLabel">0:00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-panel">
+          <div class="info-card">
+            <div class="info-card-title">Análise de viralidade</div>
+            <div class="score-bar"><div class="score-label">Engajamento</div><div class="score-track"><div class="score-fill" id="s0" style="width:0%;background:#C8F135"></div></div><div class="score-val" id="sv0">87%</div></div>
+            <div class="score-bar"><div class="score-label">Retenção</div><div class="score-track"><div class="score-fill" id="s1" style="width:0%;background:#C8F135"></div></div><div class="score-val" id="sv1">92%</div></div>
+            <div class="score-bar"><div class="score-label">Tendência</div><div class="score-track"><div class="score-fill" id="s2" style="width:0%;background:#C8F135"></div></div><div class="score-val" id="sv2">78%</div></div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-title">Detalhes do vídeo</div>
+            <div class="stat-row">
+              <div class="stat-item"><div class="stat-val" id="statDur">—</div><div class="stat-key">Duração</div></div>
+              <div class="stat-item"><div class="stat-val" id="statCuts">—</div><div class="stat-key">Cortes</div></div>
+              <div class="stat-item"><div class="stat-val" id="statFmt">—</div><div class="stat-key">Formato</div></div>
+              <div class="stat-item"><div class="stat-val" id="statStyle">—</div><div class="stat-key">Estética</div></div>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-title">Hashtags sugeridas pela IA</div>
+            <div id="hashtagsWrap" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-title">Ajustes rápidos</div>
+            <div class="edit-options">
+              <div class="edit-chip" onclick="regenCaption()">↺ Regerar legendas</div>
+              <div class="edit-chip" onclick="regenStyle()">↺ Mudar estética</div>
+              <div class="edit-chip" onclick="regenCuts()">↺ Novos cortes</div>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-title">Exportar</div>
+            <div class="export-btns">
+              <button class="export-btn primary" onclick="downloadVideo()">
+                <div class="export-icon">⬇</div>
+                Baixar em HD (MP4)
+              </button>
+              <button class="export-btn" onclick="showToast('Abrindo TikTok...')">
+                <div class="export-icon" style="background:#1a1a1a">📱</div>
+                Publicar no TikTok
+              </button>
+              <button class="export-btn" onclick="showToast('Abrindo Instagram...')">
+                <div class="export-icon" style="background:#1a1a1a">📸</div>
+                Publicar no Instagram
+              </button>
+              <button class="export-btn" onclick="showToast('Abrindo YouTube...')">
+                <div class="export-icon" style="background:#1a1a1a">🎬</div>
+                Publicar no YouTube
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="bottom-nav" id="bottomNav">
+    <button class="btn-back" id="btnBack" onclick="prevStep()" style="visibility:hidden">← Voltar</button>
+    <div class="step-hint" id="stepHint">Adicione pelo menos 1 vídeo para continuar</div>
+    <button class="btn-next" id="btnNext" onclick="nextStep()">Continuar →</button>
+  </div>
+
+  <!-- AI ASSISTANT -->
+  <div class="ai-chat-wrap">
+    <div class="ai-chat-panel" id="aiPanel">
+      <div class="ai-chat-header">
+        <div class="ai-dot"></div>
+        <div>
+          <div class="ai-name">ClipAI Assistant</div>
+          <div class="ai-status">Online · pronto para ajudar</div>
+        </div>
+      </div>
+      <div class="ai-messages" id="aiMessages">
+        <div class="ai-msg bot">Oi! Sou o assistente do ClipAI. Me diga o tipo de vídeo que você quer criar e eu te ajudo a montar o prompt perfeito!</div>
+      </div>
+      <div class="ai-input-row">
+        <input class="ai-input" id="aiInput" type="text" placeholder="Pergunte algo..." onkeydown="if(event.key==='Enter')sendAI()"/>
+        <button class="ai-send" onclick="sendAI()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="#000"><path d="M1 1l10 5-10 5V7l7-1-7-1V1z"/></svg>
+        </button>
+      </div>
+    </div>
+    <button class="ai-chat-btn" onclick="toggleChat()">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <path d="M11 2C6.03 2 2 5.58 2 10c0 2.13.9 4.07 2.38 5.55L3 20l4.62-1.5C8.96 19 9.96 19.2 11 19.2c4.97 0 9-3.58 9-8s-4.03-8.2-9-8.2z" fill="#000"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+// STATE
+let state = {
+  step: 0,
+  videos: [],
+  music: null,
+  prompt: '',
+  format: 'tiktok',
+  style: 'cinema',
+  cutSpeed: 4,
+  caption: 'destaque',
+  generated: false
+};
+
+// DRAG & DROP
+const vdz = document.getElementById('videoDropZone');
+['dragenter','dragover'].forEach(e => vdz.addEventListener(e, ev => { ev.preventDefault(); vdz.classList.add('dragover'); }));
+['dragleave','drop'].forEach(e => vdz.addEventListener(e, ev => { ev.preventDefault(); vdz.classList.remove('dragover'); }));
+vdz.addEventListener('drop', ev => {
+  const files = Array.from(ev.dataTransfer.files).filter(f => f.type.startsWith('video/'));
+  files.forEach(addVideo);
+});
+
+function handleVideoUpload(input) {
+  Array.from(input.files).forEach(addVideo);
+  input.value = '';
+}
+
+function addVideo(file) {
+  const url = URL.createObjectURL(file);
+  state.videos.push({ file, url, name: file.name, size: file.size });
+  renderFiles();
+  updateNav();
+}
+
+function renderFiles() {
+  const list = document.getElementById('filesList');
+  list.innerHTML = '';
+  state.videos.forEach((v, i) => {
+    const dur = '0:' + String(Math.floor(Math.random() * 45 + 5)).padStart(2, '0');
+    const mb = (v.size / 1024 / 1024).toFixed(1);
+    list.innerHTML += `
+      <div class="file-item">
+        <div class="file-thumb">
+          <video src="${v.url}" muted></video>
+        </div>
+        <div class="file-info">
+          <div class="file-name">${v.name}</div>
+          <div class="file-meta">${mb}MB · <span class="file-dur">${dur}</span></div>
+        </div>
+        <button class="file-remove" onclick="removeVideo(${i})">×</button>
+      </div>`;
+  });
+}
+
+function removeVideo(i) {
+  state.videos.splice(i, 1);
+  renderFiles();
+  updateNav();
+}
+
+function handleMusicUpload(input) {
+  if (!input.files[0]) return;
+  state.music = input.files[0];
+  document.getElementById('musicLabel').textContent = state.music.name;
+  document.getElementById('musicSub').textContent = (state.music.size/1024/1024).toFixed(1) + 'MB · pronta para sincronizar';
+  document.getElementById('musicWave').style.display = 'flex';
+  input.value = '';
+}
+
+// STEP NAVIGATION
+function updateNav() {
+  const hints = [
+    'Adicione pelo menos 1 vídeo para continuar',
+    'Descreva como quer que fique seu vídeo',
+    'Escolha a estética e configure os detalhes',
+    'A IA está gerando sua edição...',
+    'Seu vídeo está pronto!'
+  ];
+  document.getElementById('stepHint').textContent = hints[state.step];
+  document.getElementById('btnBack').style.visibility = state.step > 0 && state.step < 3 ? 'visible' : 'hidden';
+  const next = document.getElementById('btnNext');
+  if (state.step === 3) { next.style.display = 'none'; return; }
+  else next.style.display = 'flex';
+  if (state.step === 4) { next.textContent = '↺ Criar outro'; }
+  else { next.textContent = 'Continuar →'; }
+  next.disabled = state.step === 0 && state.videos.length === 0;
+}
+
+function goStep(n) {
+  if (n > state.step) return;
+  if (n === state.step) return;
+  state.step = n;
+  showStep();
+}
+
+function nextStep() {
+  if (state.step === 4) { resetApp(); return; }
+  if (state.step === 2) { startGeneration(); return; }
+  state.step++;
+  showStep();
+}
+
+function prevStep() {
+  if (state.step <= 0) return;
+  state.step--;
+  showStep();
+}
+
+function showStep() {
+  document.querySelectorAll('.section').forEach((s, i) => s.classList.toggle('active', i === state.step));
+  document.querySelectorAll('.step-item').forEach((n, i) => {
+    n.classList.remove('active', 'done');
+    if (i < state.step) n.classList.add('done'), n.querySelector('.step-num').textContent = '✓';
+    else if (i === state.step) n.classList.add('active'), n.querySelector('.step-num').textContent = i + 1;
+    else n.querySelector('.step-num').textContent = i + 1;
+  });
+  updateNav();
+  if (state.step === 1) analyzeWithAI();
+}
+
+// PROMPT
+function setPrompt(el) {
+  document.getElementById('prompt').value = el.textContent;
+  state.prompt = el.textContent;
+}
+
+function selectFormat(el) {
+  document.querySelectorAll('[data-fmt]').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  state.format = el.dataset.fmt;
+}
+
+// STYLE
+function selectStyle(el) {
+  document.querySelectorAll('[data-style]').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  state.style = el.dataset.style;
+}
+
+function selectCaption(el) {
+  document.querySelectorAll('[data-cap]').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  state.caption = el.dataset.cap;
+}
+
+const cutLabels = ['Muito lento', 'Lento', 'Médio', 'Rápido', 'Muito rápido (viral)'];
+function updateCutSpeed(el) {
+  state.cutSpeed = parseInt(el.value);
+  document.getElementById('cutSpeedLabel').textContent = cutLabels[state.cutSpeed - 1];
+}
+
+// AI ANALYSIS
+async function analyzeWithAI() {
+  if (state.videos.length === 0) return;
+  const th = document.getElementById('aiThinking');
+  const txt = document.getElementById('aiThinkingText');
+  const ta = document.getElementById('prompt');
+  th.style.display = 'flex';
+  const msgs = ['Analisando seus vídeos...', 'Identificando tipo de conteúdo...', 'Sugerindo estilo de edição...'];
+  let mi = 0;
+  const iv = setInterval(() => { txt.textContent = msgs[mi % msgs.length]; mi++; }, 1200);
+
+  try {
+    const vNames = state.videos.map(v => v.name).join(', ');
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `Você é um assistente especialista em edição de vídeo para influenciadores digitais e redes sociais. 
+Analise os nomes dos arquivos de vídeo enviados e sugira um prompt de edição em português brasileiro.
+Responda APENAS com um texto de prompt de edição (2-3 frases), sem explicações, sem preamble, sem formatação.
+O prompt deve descrever: tipo de vídeo, estilo de cortes, legendas sugeridas e efeitos visuais.`,
+        messages: [{ role: 'user', content: `Arquivos de vídeo: ${vNames}. Há ${state.videos.length} takes. Sugira um prompt de edição para esses vídeos.` }]
+      })
+    });
+    const data = await res.json();
+    clearInterval(iv);
+    th.style.display = 'none';
+    if (data.content && data.content[0]) {
+      ta.value = data.content[0].text;
+      state.prompt = ta.value;
+    }
+  } catch(e) {
+    clearInterval(iv);
+    th.style.display = 'none';
+  }
+}
+
+// ─── SHOTSTACK CONFIG ────────────────────────────────────────────────
+// 1. Crie sua conta gratuita em: https://shotstack.io
+// 2. Copie sua API Key do painel (Settings → API Keys)
+// 3. Cole abaixo e troque SANDBOX por PRODUCTION quando estiver pronto
+const SHOTSTACK_KEY  = 'lYp5mzFKLVSXXUNCHzDQUxODsZ8z35DAQ7LKRC7U'; // Sandbox ativo
+// const SHOTSTACK_KEY = 'qEnjPGEFME1I178omfJXiGcj7Wj05eHY1bzczpah'; // Production — descomente ao lançar
+const SHOTSTACK_ENV  = 'stage';              // 'stage' = sandbox grátis | 'v1' = produção
+const SHOTSTACK_BASE = `https://api.shotstack.io/${SHOTSTACK_ENV}`;
+const HAS_SHOTSTACK  = true;
+
+// Filtros de cor por estética
+const COLOR_FILTERS = {
+  cinema:   { brightness: 0, contrast: 0.1, saturation: -0.3, hue: 0 },
+  vibrante: { brightness: 0.05, contrast: 0.05, saturation: 0.5, hue: 0 },
+  minimal:  { brightness: 0.1, contrast: -0.05, saturation: -0.6, hue: 0 },
+  dark:     { brightness: -0.15, contrast: 0.2, saturation: -0.2, hue: 0 },
+  pastel:   { brightness: 0.1, contrast: -0.1, saturation: -0.1, hue: 0 },
+};
+
+// Transições por velocidade de corte
+const TRANSITIONS = {
+  1: 'fade', 2: 'fadeSlow', 3: 'slideLeft', 4: 'zoom', 5: 'carve'
+};
+
+// Resolução por formato
+const RESOLUTIONS = {
+  tiktok:  { width: 1080, height: 1920 },
+  reels:   { width: 1080, height: 1920 },
+  stories: { width: 1080, height: 1920 },
+  youtube: { width: 1920, height: 1080 },
+};
+
+// ─── BASE URL do proxy ────────────────────────────────────────────────
+// Quando rodando via server.js (http://localhost:3000), usa rotas relativas.
+const IS_LOCAL_SERVER = location.protocol !== 'file:';
+
+function requireServer() {
+  if (!IS_LOCAL_SERVER) {
+    throw new Error(
+      'Abra o app via servidor local!\n\n' +
+      'No terminal, na pasta do projeto:\n' +
+      '  node server.js\n\n' +
+      'Depois acesse: http://localhost:3000'
+    );
+  }
+}
+
+// ─── STEP 1: Upload vídeos via proxy → Shotstack Ingest ──────────────
+async function uploadToShotstack(file, label) {
+  requireServer();
+  setTrackStatus(2, 'active', 'Enviando ' + (label || file.name) + '...');
+
+  // 1. Cria o source no Ingest via proxy (sem CORS)
+  const sourceRes = await fetch('/api/shotstack/source', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename: file.name })
+  });
+  if (!sourceRes.ok) throw new Error('Falha ao criar source: ' + sourceRes.status);
+
+  const sourceData = await sourceRes.json();
+  const uploadUrl  = sourceData.data?.attributes?.uploadUrl || sourceData.uploadUrl;
+  const sourceId   = sourceData.data?.id || sourceData.id;
+  const publicUrl  = sourceData.data?.attributes?.url || sourceData.url;
+
+  if (!uploadUrl) throw new Error('Shotstack não retornou URL de upload');
+
+  // 2. Faz o PUT do binário via proxy (evita CORS no S3)
+  const buffer = await file.arrayBuffer();
+  const putRes = await fetch(
+    '/api/shotstack/upload?url=' + encodeURIComponent(uploadUrl),
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'x-file-type': file.type || 'video/mp4'
+      },
+      body: buffer
+    }
+  );
+  if (!putRes.ok) throw new Error('Falha no upload binário: ' + putRes.status);
+
+  // 3. Aguarda o source ficar "ready"
+  if (sourceId) {
+    setTrackStatus(2, 'active', 'Processando ' + (label || file.name) + '...');
+    for (let i = 0; i < 30; i++) {
+      await sleep(3000);
+      const pollRes  = await fetch('/api/shotstack/source/' + sourceId);
+      const pollData = await pollRes.json();
+      const status   = pollData.data?.attributes?.status || pollData.status;
+      if (status === 'ready') break;
+      if (status === 'failed') throw new Error('Processamento do vídeo falhou na Shotstack');
+    }
+  }
+
+  return publicUrl;
+}
+
+// ─── STEP 3: Envia render via proxy ──────────────────────────────────
+async function submitRender(timeline) {
+  requireServer();
+  setTrackStatus(3, 'active', 'Enviando para renderização...');
+  const res = await fetch('/api/shotstack/render', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(timeline)
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error('Render falhou: ' + err);
+  }
+  const data = await res.json();
+  return data.response?.id || data.id;
+}
+
+// ─── STEP 4: Poll render via proxy ───────────────────────────────────
+async function pollRender(renderId) {
+  requireServer();
+  setTrackStatus(6, 'active', 'Renderizando vídeo final...');
+  const maxAttempts = 60;
+  for (let i = 0; i < maxAttempts; i++) {
+    await sleep(5000);
+    const res  = await fetch('/api/shotstack/render/' + renderId);
+    const data = await res.json();
+    const status = data.response?.status || data.status;
+    setCircle(Math.min(50 + i * 1.5, 95));
+    if (status === 'done')   return data.response?.url || data.url;
+    if (status === 'failed') throw new Error('Renderização falhou no servidor Shotstack');
+  }
+  throw new Error('Timeout: renderização demorou mais que o esperado');
+}
+
+
+
+// ─── STEP 4: Polling de status até o vídeo ficar pronto ──────────────
+async function pollRender(renderId) {
+  setTrackStatus(4, 'active', 'Aguardando renderização...');
+  const maxAttempts = 60;
+  for (let i = 0; i < maxAttempts; i++) {
+    await sleep(5000); // aguarda 5s entre tentativas
+    const res = await fetch(`${SHOTSTACK_BASE}/render/${renderId}`, {
+      headers: { 'x-api-key': SHOTSTACK_KEY }
+    });
+    const data = await res.json();
+    const status = data.response?.status || data.status;
+    const pct    = Math.min(40 + i * 2, 90);
+    setCircle(pct);
+    if (status === 'done') {
+      return data.response?.url || data.url;
+    }
+    if (status === 'failed') {
+      throw new Error('Renderização falhou no servidor Shotstack');
+    }
+    // status: queued / fetching / rendering — continua aguardando
+  }
+  throw new Error('Timeout: renderização demorou mais que o esperado');
+}
+
+// ─── ORQUESTRADOR PRINCIPAL ──────────────────────────────────────────
+async function startGeneration() {
+  state.step = 3;
+  showStep();
+  document.getElementById('btnNext').style.display = 'none';
+  document.getElementById('bottomNav').style.display = 'none';
+  setCircle(0);
+
+  try {
+    // ── Fase 1: Gerar metadados com Claude ──
+    setTrackStatus(0, 'active', 'Analisando seus takes com IA...');
+    const aiMeta = await generateAIMeta();
+    setTrackStatus(0, 'done'); setTrackStatus(1, 'done');
+    setCircle(15);
+
+    if (!HAS_SHOTSTACK) {
+      // Modo demo: sem chave Shotstack, simula os passos e exibe resultado
+      await simulateSteps();
+      showResult(aiMeta, null);
+      return;
+    }
+
+    // ── Fase 2: Upload dos vídeos ──
+    setTrackStatus(2, 'active', 'Enviando vídeos para a nuvem...');
+    const videoUrls = [];
+    for (let i = 0; i < state.videos.length; i++) {
+      const v = state.videos[i];
+      const url = await uploadToShotstack(v.file, `take ${i + 1} de ${state.videos.length}`);
+      videoUrls.push(url);
+      setCircle(15 + Math.round((i + 1) / state.videos.length * 20));
+    }
+    setTrackStatus(2, 'done');
+
+    // Upload de música (se houver)
+    let musicUrl = null;
+    if (state.music) {
+      setTrackStatus(6, 'active', 'Enviando música...');
+      musicUrl = await uploadToShotstack(state.music, 'música');
+      setTrackStatus(6, 'done');
+    }
+    setCircle(40);
+
+    // ── Fase 3: Montar timeline ──
+    setTrackStatus(3, 'active', 'Montando timeline de edição...');
+    const timeline = buildShotstackTimeline(videoUrls, musicUrl, aiMeta);
+    setTrackStatus(3, 'done');
+    setCircle(45);
+
+    // ── Fase 4: Aplicar transições e filtros ──
+    setTrackStatus(4, 'active', 'Aplicando transições e filtros...');
+    setTrackStatus(5, 'active', 'Gerando legendas automáticas...');
+    const renderId = await submitRender(timeline);
+    setTrackStatus(4, 'done'); setTrackStatus(5, 'done');
+    setCircle(50);
+
+    // ── Fase 5: Aguardar render ──
+    setTrackStatus(6, 'active', 'Renderizando vídeo final...');
+    const videoUrl = await pollRender(renderId);
+    setTrackStatus(6, 'done'); setTrackStatus(7, 'done');
+    setCircle(100);
+
+    state.renderedUrl = videoUrl;
+    await sleep(800);
+    showResult(aiMeta, videoUrl);
+
+  } catch(err) {
+    console.error(err);
+    // Se a chave não foi configurada ou houve erro, cai no modo demo
+    showToast('⚠ ' + (HAS_SHOTSTACK ? err.message : 'Modo demo — configure sua chave Shotstack para renderizar de verdade'));
+    const aiMeta = await generateAIMeta().catch(() => ({
+      caption: 'Seu vídeo editado com IA 🔥',
+      hashtags: ['viral','trending','fyp','paravocê','influencer','conteudo','reels','tiktok'],
+      captions: ['Bora!', 'Foco total 💪', 'Consistência é tudo'],
+      engagement: 87, retention: 92, trend: 78
+    }));
+    showResult(aiMeta, null);
+  }
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function setCircle(pct) {
+  const circumf = 264;
+  document.getElementById('procCircle').style.strokeDashoffset = circumf - (circumf * pct / 100);
+  document.getElementById('procNum').textContent = pct + '%';
+}
+
+function setTrackStatus(i, status, label) {
+  const d = document.getElementById('d' + i);
+  const l = document.getElementById('l' + i);
+  const t = document.getElementById('t' + i);
+  if (!d) return;
+  d.classList.remove('done', 'active');
+  l.classList.remove('done', 'active');
+  if (status === 'done') {
+    d.classList.add('done'); l.classList.add('done');
+    if (t) { t.textContent = '✓'; t.classList.add('done'); }
+  } else if (status === 'active') {
+    d.classList.add('active'); l.classList.add('active');
+    if (label) l.textContent = label;
+  }
+}
+
+async function simulateSteps() {
+  const durs = [1800, 1200, 2200, 1800, 2500, 1400, 1800, 1200];
+  for (let i = 2; i < 8; i++) {
+    setTrackStatus(i, 'active');
+    await sleep(durs[i]);
+    setTrackStatus(i, 'done');
+    setCircle(15 + Math.round((i - 1) / 6 * 85));
+  }
+}
+
+async function generateAIMeta() {
+  const prompt = document.getElementById('prompt').value || 'vídeo para redes sociais';
+  const res = await fetch('/api/claude', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: `Você é um especialista em marketing digital para influenciadores.
+Responda APENAS em JSON puro sem markdown, sem backticks, com os campos:
+- caption: (string) legenda impactante máx 80 chars
+- captions: (array de 4 strings) legendas curtas para sobrepor no vídeo (máx 30 chars cada)
+- hashtags: (array de 8 strings) hashtags sem #
+- engagement: (number 70-97)
+- retention: (number 75-97)
+- trend: (number 60-92)`,
+      messages: [{ role: 'user', content: `Formato: ${state.format}. Estética: ${state.style}. Prompt do criador: ${prompt}` }]
+    })
+  });
+  const data = await res.json();
+  const raw = data.content[0].text.replace(/```json|```/g,'').trim();
+  return JSON.parse(raw);
+}
+
+function showResult(data) {
+  state.step = 4;
+  document.getElementById('bottomNav').style.display = 'flex';
+  showStep();
+
+  const fmtMap = { tiktok: 'TikTok · 9:16', reels: 'Reels · 9:16', youtube: 'YouTube · 16:9', stories: 'Stories · 9:16' };
+  document.getElementById('previewBadge').textContent = fmtMap[state.format] || 'TikTok · 9:16';
+  document.getElementById('previewCaption').textContent = data.caption || 'Vídeo gerado com IA';
+  document.getElementById('previewHashtags').textContent = '#' + (data.hashtags || []).slice(0,3).join(' #');
+
+  const styleMap = { cinema: 'Cinema', vibrante: 'Vibrante', minimal: 'Minimal', dark: 'Dark', pastel: 'Pastel' };
+  document.getElementById('statDur').textContent = '0:' + String(Math.floor(state.videos.length * 8 + 12)).padStart(2,'0');
+  document.getElementById('statCuts').textContent = state.videos.length * 3 + 2;
+  document.getElementById('statFmt').textContent = state.format.charAt(0).toUpperCase() + state.format.slice(1);
+  document.getElementById('statStyle').textContent = styleMap[state.style] || state.style;
+
+  setTimeout(() => {
+    document.getElementById('s0').style.width = (data.engagement || 87) + '%';
+    document.getElementById('s1').style.width = (data.retention || 92) + '%';
+    document.getElementById('s2').style.width = (data.trend || 78) + '%';
+  }, 300);
+
+  const hw = document.getElementById('hashtagsWrap');
+  hw.innerHTML = (data.hashtags || []).map(h =>
+    `<div style="padding:4px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);font-size:12px;color:var(--accent)">#${h}</div>`
+  ).join('');
+
+  if (state.videos.length > 0) {
+    const wrap = document.getElementById('previewVideoWrap');
+    wrap.innerHTML = `<video src="${state.videos[0].url}" style="width:100%;height:100%;object-fit:cover" loop muted id="resultVid"></video>`;
+  }
+}
+
+// PREVIEW CONTROLS
+let playing = false;
+function togglePlay() {
+  const vid = document.getElementById('resultVid');
+  if (!vid) return;
+  playing = !playing;
+  if (playing) { vid.play(); animateTimeline(vid); } else { vid.pause(); }
+  document.getElementById('playIcon').innerHTML = playing
+    ? '<rect x="3" y="2" width="3" height="10" fill="#000"/><rect x="8" y="2" width="3" height="10" fill="#000"/>'
+    : '<path d="M3 2l8 5-8 5V2z" fill="#000"/>';
+}
+
+function animateTimeline(vid) {
+  const fill = document.getElementById('timelineFill');
+  const label = document.getElementById('timeLabel');
+  const tick = setInterval(() => {
+    if (!playing || !vid) { clearInterval(tick); return; }
+    const pct = vid.currentTime / (vid.duration || 30) * 100;
+    fill.style.width = pct + '%';
+    const s = Math.floor(vid.currentTime);
+    label.textContent = Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+  }, 100);
+}
+
+function seek(e, bar) {
+  const pct = e.offsetX / bar.offsetWidth;
+  const vid = document.getElementById('resultVid');
+  if (vid) vid.currentTime = pct * (vid.duration || 30);
+  document.getElementById('timelineFill').style.width = (pct * 100) + '%';
+}
+
+// AI CHAT
+function toggleChat() {
+  document.getElementById('aiPanel').classList.toggle('open');
+}
+
+async function sendAI() {
+  const inp = document.getElementById('aiInput');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = '';
+
+  const msgs = document.getElementById('aiMessages');
+  msgs.innerHTML += `<div class="ai-msg user">${msg}</div>`;
+  msgs.innerHTML += `<div class="ai-msg bot" id="aiTyping">...</div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+
+  try {
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        system: 'Você é um assistente especialista em edição de vídeo para influenciadores. Responda em português, de forma breve e prática (máx 2 frases). Ajude a criar bons prompts de edição.',
+        messages: [{ role: 'user', content: msg }]
+      })
+    });
+    const data = await res.json();
+    document.getElementById('aiTyping').textContent = data.content[0].text;
+  } catch(e) {
+    document.getElementById('aiTyping').textContent = 'Descreva seu conteúdo e eu sugiro o prompt ideal!';
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// UTILS
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2500);
+}
+
+function downloadVideo() {
+  if (state.videos.length > 0) {
+    const a = document.createElement('a');
+    a.href = state.videos[0].url;
+    a.download = 'clipai_video.mp4';
+    a.click();
+  } else {
+    showToast('Nenhum vídeo para baixar');
+  }
+}
+
+function regenCaption() { showToast('Regenerando legendas...'); }
+function regenStyle() { state.step = 2; showStep(); }
+function regenCuts() { showToast('Gerando novos cortes...'); }
+
+function resetApp() {
+  state = { step: 0, videos: [], music: null, prompt: '', format: 'tiktok', style: 'cinema', cutSpeed: 4, caption: 'destaque', generated: false };
+  document.getElementById('filesList').innerHTML = '';
+  document.getElementById('musicLabel').textContent = 'Clique para adicionar música';
+  document.getElementById('musicWave').style.display = 'none';
+  document.getElementById('prompt').value = '';
+  document.getElementById('bottomNav').style.display = 'flex';
+  showStep();
+}
+
+updateNav();
+</script>
+</body>
+</html>
